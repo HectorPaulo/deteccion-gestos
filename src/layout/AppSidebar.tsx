@@ -22,7 +22,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   {
     icon: <GridIcon />,
-    name: "Dashboard",
+    name: "Inicio",
     path: "/",
   },
   {
@@ -261,14 +261,14 @@ const AppSidebar: React.FC = () => {
                 className="dark:hidden"
                 src="/images/logo/DOS-COLORES-COMPLETO.png"
                 alt="Logo"
-                width={150}
+                width={225}
                 height={40}
               />
               <Image
                 className="hidden dark:block"
                 src="/images/logo/BLANCO-COMPLETO.png"
                 alt="Logo"
-                width={150}
+                width={225}
                 height={40}
               />
             </>

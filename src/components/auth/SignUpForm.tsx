@@ -4,9 +4,44 @@ import Label from "@/components/form/Label";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation"; // Import useRouter
+import { useFormik } from "formik";
+import * as Yup from "yup";
 
 export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter(); // Use useRouter here
+
+  // Validaciones con Yup
+  const validationSchema = Yup.object({
+    fname: Yup.string().required("El nombre es obligatorio"),
+    lname: Yup.string().required("El apellido es obligatorio"),
+    email: Yup.string()
+      .email("Debe ser un correo válido")
+      .required("El correo es obligatorio"),
+    password: Yup.string()
+      .min(6, "La contraseña debe tener al menos 6 caracteres")
+      .required("La contraseña es obligatoria"),
+  });
+
+  // Formik para manejar el formulario
+  const formik = useFormik({
+    initialValues: {
+      fname: "",
+      lname: "",
+      email: "",
+      password: "",
+    },
+    validationSchema,
+    onSubmit: (values) => {
+      console.log("Datos del formulario:", values);
+      // Simula registro exitoso
+      setTimeout(() => {
+        router.push("/prueba-vida"); // Redirige a PruebaVida
+      }, 1000);
+    },
+  });
+
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar">
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
@@ -29,11 +64,10 @@ export default function SignUpForm() {
             </p>
           </div>
           <div>
-            
-            <form>
+            <form onSubmit={formik.handleSubmit}>
               <div className="space-y-5">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  {/* <!-- Nombre --> */}
+                  {/* Nombre */}
                   <div className="sm:col-span-1">
                     <Label>
                       Nombre<span className="text-error-500">*</span>
@@ -43,9 +77,17 @@ export default function SignUpForm() {
                       id="fname"
                       name="fname"
                       placeholder="Ingresa tu nombre"
+                      value={formik.values.fname}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
                     />
+                    {formik.touched.fname && formik.errors.fname && (
+                      <p className="text-sm text-error-500">
+                        {formik.errors.fname}
+                      </p>
+                    )}
                   </div>
-                  {/* <!-- Apellido --> */}
+                  {/* Apellido */}
                   <div className="sm:col-span-1">
                     <Label>
                       Apellido<span className="text-error-500">*</span>
@@ -55,10 +97,18 @@ export default function SignUpForm() {
                       id="lname"
                       name="lname"
                       placeholder="Ingresa tu apellido"
+                      value={formik.values.lname}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
                     />
+                    {formik.touched.lname && formik.errors.lname && (
+                      <p className="text-sm text-error-500">
+                        {formik.errors.lname}
+                      </p>
+                    )}
                   </div>
                 </div>
-                {/* <!-- Correo Electrónico --> */}
+                {/* Correo Electrónico */}
                 <div>
                   <Label>
                     Correo Electrónico<span className="text-error-500">*</span>
@@ -68,9 +118,17 @@ export default function SignUpForm() {
                     id="email"
                     name="email"
                     placeholder="Ingresa tu correo electrónico"
+                    value={formik.values.email}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                   />
+                  {formik.touched.email && formik.errors.email && (
+                    <p className="text-sm text-error-500">
+                      {formik.errors.email}
+                    </p>
+                  )}
                 </div>
-                {/* <!-- Contraseña --> */}
+                {/* Contraseña */}
                 <div>
                   <Label>
                     Contraseña<span className="text-error-500">*</span>
@@ -79,6 +137,11 @@ export default function SignUpForm() {
                     <Input
                       placeholder="Ingresa tu contraseña"
                       type={showPassword ? "text" : "password"}
+                      id="password"
+                      name="password"
+                      value={formik.values.password}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -91,10 +154,18 @@ export default function SignUpForm() {
                       )}
                     </span>
                   </div>
+                  {formik.touched.password && formik.errors.password && (
+                    <p className="text-sm text-error-500">
+                      {formik.errors.password}
+                    </p>
+                  )}
                 </div>
-                {/* <!-- Botón --> */}
+                {/* Botón */}
                 <div>
-                  <button className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
+                  <button
+                    type="submit"
+                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
+                  >
                     Registrarse
                   </button>
                 </div>

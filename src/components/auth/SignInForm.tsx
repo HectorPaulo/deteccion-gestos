@@ -1,13 +1,54 @@
 "use client";
+import { useRouter } from "next/navigation"; // Cambia esto
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+
+export interface InputProps {
+  placeholder?: string;
+  type?: string;
+  id?: string;
+  name?: string;
+  value?: string; // Added value property
+  onChange?: React.ChangeEventHandler<HTMLInputElement>;
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
+}
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter(); // Ahora debería funcionar correctamente
+
+  // Validaciones con Yup
+  const validationSchema = Yup.object({
+    email: Yup.string()
+      .email("Debe ser un correo válido")
+      .required("El correo es obligatorio"),
+    password: Yup.string()
+      .min(6, "La contraseña debe tener al menos 6 caracteres")
+      .required("La contraseña es obligatoria"),
+  });
+
+  // Formik para manejar el formulario
+  const formik = useFormik({
+    initialValues: {
+      email: "",
+      password: "",
+    },
+    validationSchema,
+    onSubmit: (values) => {
+      console.log("Datos del formulario:", values);
+      // Simula autenticación exitosa
+      setTimeout(() => {
+        router.push("/prueba-vida"); // Redirige a PruebaVida
+      }, 1000);
+    },
+  });
+
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full">
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
@@ -30,13 +71,26 @@ export default function SignInForm() {
             </p>
           </div>
           <div>
-            <form>
+            <form onSubmit={formik.handleSubmit}>
               <div className="space-y-6">
                 <div>
                   <Label>
                     Correo Electrónico <span className="text-error-500">*</span>{" "}
                   </Label>
-                  <Input placeholder="example@mail.com" type="email" />
+                  <Input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="example@mail.com"
+                    value={formik.values.email}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  />
+                  {formik.touched.email && formik.errors.email && (
+                    <p className="text-sm text-error-500">
+                      {formik.errors.email}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label>
@@ -46,6 +100,11 @@ export default function SignInForm() {
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Ingresa tu contraseña"
+                      id="password"
+                      name="password"
+                      value={formik.values.password}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -58,9 +117,14 @@ export default function SignInForm() {
                       )}
                     </span>
                   </div>
+                  {formik.touched.password && formik.errors.password && (
+                    <p className="text-sm text-error-500">
+                      {formik.errors.password}
+                    </p>
+                  )}
                 </div>
                 <div>
-                  <Button className="w-full" size="sm">
+                  <Button type="submit" className="w-full" size="sm">
                     Iniciar sesión
                   </Button>
                 </div>
