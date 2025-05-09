@@ -9,24 +9,27 @@ const PruebaVida = () => {
   const [gesture, setGesture] = useState(GESTURES[Math.floor(Math.random() * GESTURES.length)]);
   const [cumple, setCumple] = useState(false);
   const router = useRouter();
-  const streamRef = useRef<MediaStream | null>(null); // Referencia para el flujo de medios
+  const streamRef = useRef<MediaStream | null>(null);
 
   const cambiarGesto = () => {
     const nuevaLista = GESTURES.filter((g) => g.shape !== gesture.shape);
     setGesture(nuevaLista[Math.floor(Math.random() * nuevaLista.length)]);
-    setCumple(false); // Reinicia el estado
+    setCumple(false);
   };
 
   useEffect(() => {
     const init = async () => {
       try {
+        console.log("Inicializando Mediapipe...");
         await mediapipeService.init();
+        console.log("Mediapipe inicializado correctamente.");
         const video = videoRef.current;
         if (video) {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          streamRef.current = stream; // Guarda el flujo de medios
+          streamRef.current = stream;
           video.srcObject = stream;
           video.onloadeddata = () => {
+            console.log("Video cargado y listo.");
             video.play();
             loop();
           };
@@ -40,7 +43,15 @@ const PruebaVida = () => {
       const video = videoRef.current;
       if (!video || !gesture) return;
 
+      // Verifica que el video tenga dimensiones válidas
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        console.warn("El video no tiene dimensiones válidas.");
+        requestAnimationFrame(loop);
+        return;
+      }
+
       try {
+        console.log("Ejecutando bucle de detección...");
         if (gesture.tipo === "rostro") {
           const blendShapes = await mediapipeService.detectFace(video);
           if (blendShapes) {
@@ -61,7 +72,6 @@ const PruebaVida = () => {
     init();
 
     return () => {
-      // Detén el flujo de medios al desmontar el componente
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
@@ -69,12 +79,11 @@ const PruebaVida = () => {
     };
   }, [gesture]);
 
-  // Redirige automáticamente cuando cumple sea true
   useEffect(() => {
     if (cumple) {
       setTimeout(() => {
         router.push("/");
-      }, 1000); // Espera 1 segundo antes de redirigir
+      }, 1000);
     }
   }, [cumple, router]);
 
@@ -83,29 +92,14 @@ const PruebaVida = () => {
       <div className="bg-white text-gray-800 rounded-lg shadow-lg p-8 max-w-lg w-full">
         <h2 className="text-2xl font-semibold text-center mb-4">Prueba de Vida</h2>
         <h1 className="text-4xl font-bold text-center text-indigo-600 mb-6">{gesture.nombre}</h1>
-
         <div className="flex justify-center mb-6">
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            className="w-full max-w-md rounded-lg shadow-md border border-gray-300"
-          ></video>
+          <video ref={videoRef} autoPlay muted className="w-full max-w-md rounded-lg shadow-md border border-gray-300"></video>
         </div>
-
-        <div
-          className={`text-center text-lg font-semibold mb-6 ${
-            cumple ? "text-green-600" : "text-red-600"
-          }`}
-        >
+        <div className={`text-center text-lg font-semibold mb-6 ${cumple ? "text-green-600" : "text-red-600"}`}>
           {cumple ? "✅ Cumple" : "❌ No Cumple"}
         </div>
-
         <div className="flex flex-col gap-4">
-          <button
-            onClick={cambiarGesto}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-600 transition"
-          >
+          <button onClick={cambiarGesto} className="bg-blue-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-600 transition">
             Cambiar gesto
           </button>
         </div>

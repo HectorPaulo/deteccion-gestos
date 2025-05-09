@@ -3,7 +3,6 @@ import {
   GestureRecognizer,
   FilesetResolver,
 } from "@mediapipe/tasks-vision";
-// Removed duplicate import of mediapipeService
 
 export class MediapipeService {
   private faceLandmarker: FaceLandmarker | null = null;
@@ -35,6 +34,8 @@ export class MediapipeService {
         },
         runningMode: this.runningMode,
       });
+
+      console.log("Mediapipe inicializado correctamente.");
     } catch (error) {
       console.error("Error inicializando Mediapipe:", error);
     }
@@ -61,9 +62,10 @@ export class MediapipeService {
         return null;
       }
       const results = await this.gestureRecognizer.recognizeForVideo(video, performance.now());
+      console.log("Resultados de detectGesture:", results);
       return results?.gestures?.[0]?.[0]?.categoryName || "";
     } catch (error) {
-      console.error("Error detectando gesto:", error);
+      console.error("Error en detectGesture:", error);
       return null;
     }
   }
