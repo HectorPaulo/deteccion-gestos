@@ -62,10 +62,9 @@ export class MediapipeService {
         return null;
       }
       const results = await this.gestureRecognizer.recognizeForVideo(video, performance.now());
-      console.log("Resultados de detectGesture:", results);
       return results?.gestures?.[0]?.[0]?.categoryName || "";
     } catch (error) {
-      console.error("Error en detectGesture:", error);
+      console.error("Error detectando gesto:", error);
       return null;
     }
   }
