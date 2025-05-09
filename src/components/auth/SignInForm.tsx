@@ -1,5 +1,5 @@
 "use client";
-import { useRouter } from "next/navigation"; // Cambia esto
+import { useRouter } from "next/navigation";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
@@ -21,7 +21,9 @@ export interface InputProps {
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter(); // Ahora debería funcionar correctamente
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
 
   // Validaciones con Yup
   const validationSchema = Yup.object({
@@ -40,12 +42,50 @@ export default function SignInForm() {
       password: "",
     },
     validationSchema,
-    onSubmit: (values) => {
-      console.log("Datos del formulario:", values);
-      // Simula autenticación exitosa
-      setTimeout(() => {
-        router.push("/prueba-vida"); // Redirige a PruebaVida
-      }, 1000);
+    onSubmit: async (values) => {
+      setIsLoading(true);
+      setError("");
+      
+      try {
+        console.log("Enviando datos:", values);
+        
+        // Realizar petición POST al endpoint especificado
+        const response = await fetch("http://localhost:3008/api/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: values.email,
+            password: values.password
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Error en la autenticación");
+        }
+
+        // Procesar respuesta exitosa
+        const data = await response.json();
+        console.log("Respuesta del servidor:", data);
+        
+        // Guardar datos en localStorage
+        localStorage.setItem("login", JSON.stringify(true));
+        localStorage.setItem("isAdmin", JSON.stringify(data.isAdmin || false));
+        localStorage.setItem("userId", data.userId || "");
+        
+        console.log("Datos guardados en localStorage");
+        
+        // Redirección a la página de prueba de vida
+        router.push("/prueba-vida");
+        
+      } catch (error) {
+        console.error("Error durante el inicio de sesión:", error);
+        setError(error instanceof Error ? error.message : "Error en la autenticación");
+      } finally {
+        setIsLoading(false);
+      }
     },
   });
 
@@ -71,6 +111,11 @@ export default function SignInForm() {
             </p>
           </div>
           <div>
+            {error && (
+              <div className="p-3 mb-4 text-sm text-white bg-error-500 rounded-md">
+                {error}
+              </div>
+            )}
             <form onSubmit={formik.handleSubmit}>
               <div className="space-y-6">
                 <div>
@@ -85,6 +130,7 @@ export default function SignInForm() {
                     value={formik.values.email}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
+                    disabled={isLoading}
                   />
                   {formik.touched.email && formik.errors.email && (
                     <p className="text-sm text-error-500">
@@ -105,6 +151,7 @@ export default function SignInForm() {
                       value={formik.values.password}
                       onChange={formik.handleChange}
                       onBlur={formik.handleBlur}
+                      disabled={isLoading}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -124,8 +171,13 @@ export default function SignInForm() {
                   )}
                 </div>
                 <div>
-                  <Button type="submit" className="w-full" size="sm">
-                    Iniciar sesión
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    size="sm"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
                   </Button>
                 </div>
               </div>
