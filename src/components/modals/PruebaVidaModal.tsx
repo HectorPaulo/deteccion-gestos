@@ -47,9 +47,9 @@ export default function PruebaVidaModal({ onClose }: PruebaVidaModalProps) {
         </div>
         <button
           onClick={onClose}
-          className="mt-4 bg-red-500 text-white px-4 py-2 rounded-xl shadow-xl hover:bg-red-600 transition w-1/2"
+          className="mt-4 ml-63 bg-red-500 text-white px-4 py-2 rounded-xl shadow-xl hover:bg-red-600 transition w-1/2"
           disabled={isSubmitting}
-        >
+          >
           Cerrar
         </button>
       </div>

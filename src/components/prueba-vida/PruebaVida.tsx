@@ -118,16 +118,16 @@ export default function PruebaVida({ onEnviarDatos }: PruebaVidaProps) {
         className="w-full h-3/4 rounded-lg shadow-md mb-4 object-cover"
       ></video>
       <canvas ref={canvasRef} className="hidden"></canvas>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col items-center gap-6 mt-6">
         <button
           onClick={cambiarGesto}
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-600 transition"
+          className="bg-blue-500 text-white px-6 py-3 text-lg rounded-lg shadow-lg hover:bg-blue-600 transition w-64"
         >
           Cambiar gesto
         </button>
         <button
           onClick={enviarDatos}
-          className="bg-green-500 text-white px-4 py-2 rounded-xl shadow-xl hover:bg-green-600 transition"
+          className="bg-green-500 text-white px-6 py-3 text-lg rounded-lg shadow-lg hover:bg-green-600 transition w-64"
         >
           Enviar datos
         </button>
