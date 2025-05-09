@@ -4,7 +4,8 @@ import { useSidebar } from "@/context/SidebarContext";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
-import React from "react";
+import PruebaVidaModal from "@/components/modals/PruebaVidaModal";
+import React, { useState } from "react";
 
 export default function AdminLayout({
   children,
@@ -12,6 +13,11 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
+  const [showModal, setShowModal] = useState(true); // Controla la visibilidad del modal
+
+  const handleModalClose = () => {
+    setShowModal(false); // Cierra el modal
+  };
 
   // Dynamic class for main content margin based on sidebar state
   const mainContentMargin = isMobileOpen
@@ -22,12 +28,18 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen xl:flex">
+      {/* Modal de Prueba de Vida */}
+      {showModal && (
+        <div className="relative z-50">
+          <PruebaVidaModal onClose={handleModalClose} />
+        </div>
+      )}
       {/* Sidebar and Backdrop */}
       <AppSidebar />
       <Backdrop />
       {/* Main Content Area */}
       <div
-        className={`flex-1 transition-all  duration-300 ease-in-out ${mainContentMargin}`}
+        className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
       >
         {/* Header */}
         <AppHeader />

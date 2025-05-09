@@ -117,9 +117,9 @@ const PruebaVida = () => {
   }, []);
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
-      <div className="bg-white text-gray-800 rounded-lg shadow-lg p-8 max-w-lg w-full">
-        <h2 className="text-2xl font-semibold text-center mb-4">Prueba de Vida</h2>
+    <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-500 to-blue-950 text-white">
+      <div className="bg-white text-gray-800 rounded-4xl shadow-xl p-8 max-w-screen w-1/2">
+        <h2 className="text-6xl font-semibold text-center mb-4">Prueba de Vida</h2>
         <h1 className="text-4xl font-bold text-center text-indigo-600 mb-6">{gesture.nombre}</h1>
         <div className="flex justify-center mb-6">
           <video ref={videoRef} autoPlay muted className="w-full max-w-md rounded-lg shadow-md border border-gray-300"></video>
@@ -128,7 +128,7 @@ const PruebaVida = () => {
           {cumple ? "✅ Cumple" : "❌ No Cumple"}
         </div>
         <div className="flex flex-col gap-4">
-          <button onClick={cambiarGesto} className="bg-blue-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-600 transition">
+          <button onClick={cambiarGesto} className="bg-blue-500 text-white px-4 py-2 rounded-xl shadow hover:bg-blue-600 transition">
             Cambiar gesto
           </button>
         </div>
