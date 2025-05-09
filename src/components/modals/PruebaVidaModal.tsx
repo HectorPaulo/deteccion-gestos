@@ -40,7 +40,7 @@ export default function PruebaVidaModal({ onClose }: PruebaVidaModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-md">
       <div className="bg-white rounded-xl shadow-xl p-24 w-2/4 h-5/6 flex flex-col justify-between lg:ml-[300px]">
         <div className="flex-1 overflow-y-auto">
           <PruebaVida onEnviarDatos={handleEnviarDatos} />
