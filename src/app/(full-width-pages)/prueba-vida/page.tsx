@@ -6,27 +6,37 @@ import { mediapipeService } from "@/services/mediapipeService";
 
 const PruebaVida = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [gesture, setGesture] = useState(null);
+  const [gesture, setGesture] = useState(GESTURES[Math.floor(Math.random() * GESTURES.length)]);
   const [cumple, setCumple] = useState(false);
   const router = useRouter();
-  const isRunning = useRef(false); // Flag para controlar el bucle
-
-  useEffect(() => {
-    setGesture(GESTURES[Math.floor(Math.random() * GESTURES.length)]);
-  }, []);
+  const streamRef = useRef<MediaStream | null>(null); // Referencia para el flujo de medios
 
   const cambiarGesto = () => {
-    if (!gesture) return;
-    isRunning.current = false; // Detén el bucle antes de cambiar el gesto
     const nuevaLista = GESTURES.filter((g) => g.shape !== gesture.shape);
     setGesture(nuevaLista[Math.floor(Math.random() * nuevaLista.length)]);
-    setCumple(false);
-    isRunning.current = true; // Reactiva el bucle después de cambiar el gesto
+    setCumple(false); // Reinicia el estado
   };
 
   useEffect(() => {
+    const init = async () => {
+      try {
+        await mediapipeService.init();
+        const video = videoRef.current;
+        if (video) {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          streamRef.current = stream; // Guarda el flujo de medios
+          video.srcObject = stream;
+          video.onloadeddata = () => {
+            video.play();
+            loop();
+          };
+        }
+      } catch (error) {
+        console.error("Error inicializando Mediapipe o el video:", error);
+      }
+    };
+
     const loop = async () => {
-      if (!isRunning.current) return; // Detén el bucle si no está activo
       const video = videoRef.current;
       if (!video || !gesture) return;
 
@@ -48,66 +58,58 @@ const PruebaVida = () => {
       requestAnimationFrame(loop);
     };
 
-    const init = async () => {
-      try {
-        await mediapipeService.init();
-        const video = videoRef.current;
-        if (video) {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          video.srcObject = stream;
-          video.onloadeddata = () => {
-            video.play();
-            isRunning.current = true; // Activa el bucle
-            loop();
-          };
-        }
-      } catch (error) {
-        console.error("Error inicializando Mediapipe o el video:", error);
-      }
-    };
-
     init();
 
     return () => {
-      isRunning.current = false; // Detén el bucle al desmontar el componente
+      // Detén el flujo de medios al desmontar el componente
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
     };
   }, [gesture]);
 
-  const handleContinue = () => {
-    localStorage.setItem("passedPruebaVida", "true");
-    router.push("/");
-  };
-
-  if (!gesture) {
-    return <div>Cargando...</div>;
-  }
+  // Redirige automáticamente cuando cumple sea true
+  useEffect(() => {
+    if (cumple) {
+      setTimeout(() => {
+        router.push("/");
+      }, 1000); // Espera 1 segundo antes de redirigir
+    }
+  }, [cumple, router]);
 
   return (
-    <div className="align-center p-4 bg-white rounded-lg shadow-md max-w-md mx-auto mt-10">
-      <h2 className="text-xl font-semibold mb-2">Haz el gesto:</h2>
-      <h1 className="text-3xl font-bold text-center mb-4">{gesture.nombre}</h1>
+    <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+      <div className="bg-white text-gray-800 rounded-lg shadow-lg p-8 max-w-lg w-full">
+        <h2 className="text-2xl font-semibold text-center mb-4">Prueba de Vida</h2>
+        <h1 className="text-4xl font-bold text-center text-indigo-600 mb-6">{gesture.nombre}</h1>
 
-      <video ref={videoRef} autoPlay muted className="w-300 rounded shadow-md mb-4"></video>
+        <div className="flex justify-center mb-6">
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            className="w-full max-w-md rounded-lg shadow-md border border-gray-300"
+          ></video>
+        </div>
 
-      <div className={`text-2xl font-semibold mb-4 ${cumple ? "text-green-600" : "text-red-600"}`}>
-        {cumple ? "✅ Cumple" : "❌ No Cumple"}
-      </div>
-
-      <button
-        onClick={cambiarGesto}
-        className="bg-blue-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-600 transition"
-      >
-        Cambiar gesto
-      </button>
-
-      {cumple && (
-        <button
-          onClick={handleContinue}
-          className="bg-green-500 text-white px-4 py-2 rounded-lg shadow hover:bg-green-600 transition mt-4"
+        <div
+          className={`text-center text-lg font-semibold mb-6 ${
+            cumple ? "text-green-600" : "text-red-600"
+          }`}
         >
-          Continuar al Dashboard
-        </button>
-      )}
+          {cumple ? "✅ Cumple" : "❌ No Cumple"}
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <button
+            onClick={cambiarGesto}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-600 transition"
+          >
+            Cambiar gesto
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
