@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { GESTURES } from "@/constants/gestures";
 import { mediapipeService } from "@/services/mediapipeService";
+import { FilesetResolver, FaceLandmarker, GestureRecognizer } from "@mediapipe/tasks-vision";
 
 const PruebaVida = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -29,6 +30,10 @@ const PruebaVida = () => {
           streamRef.current = stream;
           video.srcObject = stream;
           video.onloadeddata = () => {
+            if (video.videoWidth === 0 || video.videoHeight === 0) {
+              console.error("El video no tiene dimensiones válidas.");
+              return;
+            }
             console.log("Video cargado y listo.");
             video.play();
             loop();
@@ -53,10 +58,16 @@ const PruebaVida = () => {
       try {
         console.log("Ejecutando bucle de detección...");
         if (gesture.tipo === "rostro") {
-          const blendShapes = await mediapipeService.detectFace(video);
-          if (blendShapes) {
-            const shape = blendShapes.find((s) => s.categoryName === gesture.shape);
-            setCumple(!!(shape && "umbral" in gesture && typeof gesture.umbral === "number" && shape.score >= gesture.umbral));
+          try {
+            console.log("Ejecutando detección de rostro...");
+            const blendShapes = await mediapipeService.detectFace(video);
+            console.log("Resultados de detección de rostro:", blendShapes);
+            if (blendShapes) {
+              const shape = blendShapes.find((s) => s.categoryName === gesture.shape);
+              setCumple(!!(shape && "umbral" in gesture && typeof gesture.umbral === "number" && shape.score >= gesture.umbral));
+            }
+          } catch (error) {
+            console.error("Error detectando rostro:", error);
           }
         } else {
           const detectedGesture = await mediapipeService.detectGesture(video);
@@ -86,6 +97,24 @@ const PruebaVida = () => {
       }, 1000);
     }
   }, [cumple, router]);
+
+  useEffect(() => {
+    const initializeFaceLandmarker = async () => {
+      const filesetResolver = await FilesetResolver.forVisionTasks();
+      this.faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath:
+            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+          delegate: "CPU", // Cambia a CPU si GPU no funciona correctamente
+        },
+        outputFaceBlendshapes: true,
+        runningMode: this.runningMode,
+        numFaces: 1,
+      });
+    };
+
+    initializeFaceLandmarker();
+  }, []);
 
   return (
     <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
