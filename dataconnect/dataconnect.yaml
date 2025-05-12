@@ -1,0 +1,12 @@
+specVersion: "v1"
+serviceId: "deteccion-gestos"
+location: "us-central1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "fdcdb"
+      cloudSql:
+        instanceId: "deteccion-gestos-fdc"
+      # schemaValidation: "COMPATIBLE"
+connectorDirs: ["./connector"]

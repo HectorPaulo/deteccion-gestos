@@ -1,49 +1,152 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
+import { useRouter } from "next/navigation";
+import { auth } from "@/firebaseConfig";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
+import React, { useState, useCallback, useRef } from "react";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import Link from "next/link";
-import React, { useState } from "react";
-import { useRouter } from "next/navigation"; // Import useRouter
-import { useFormik } from "formik";
-import * as Yup from "yup";
+import Select from "@/components/form/Select";
+
+const estadosMexico = [
+  { value: "Aguascalientes", label: "Aguascalientes" },
+  { value: "Baja California", label: "Baja California" },
+  { value: "Baja California Sur", label: "Baja California Sur" },
+  { value: "Campeche", label: "Campeche" },
+  { value: "Chiapas", label: "Chiapas" },
+  { value: "Chihuahua", label: "Chihuahua" },
+  { value: "Ciudad de México", label: "Ciudad de México" },
+  { value: "Coahuila", label: "Coahuila" },
+  { value: "Colima", label: "Colima" },
+  { value: "Durango", label: "Durango" },
+  { value: "Estado de México", label: "Estado de México" },
+  { value: "Guanajuato", label: "Guanajuato" },
+  { value: "Guerrero", label: "Guerrero" },
+  { value: "Hidalgo", label: "Hidalgo" },
+  { value: "Jalisco", label: "Jalisco" },
+  { value: "Michoacán", label: "Michoacán" },
+  { value: "Morelos", label: "Morelos" },
+  { value: "Nayarit", label: "Nayarit" },
+  { value: "Nuevo León", label: "Nuevo León" },
+  { value: "Oaxaca", label: "Oaxaca" },
+  { value: "Puebla", label: "Puebla" },
+  { value: "Querétaro", label: "Querétaro" },
+  { value: "Quintana Roo", label: "Quintana Roo" },
+  { value: "San Luis Potosí", label: "San Luis Potosí" },
+  { value: "Sinaloa", label: "Sinaloa" },
+  { value: "Sonora", label: "Sonora" },
+  { value: "Tabasco", label: "Tabasco" },
+  { value: "Tamaulipas", label: "Tamaulipas" },
+  { value: "Tlaxcala", label: "Tlaxcala" },
+  { value: "Veracruz", label: "Veracruz" },
+  { value: "Yucatán", label: "Yucatán" },
+  { value: "Zacatecas", label: "Zacatecas" },
+];
 
 export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter(); // Use useRouter here
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [middleName, setMiddleName] = useState("");
+  const [username, setUsername] = useState("");
+  const [birthYear, setBirthYear] = useState("");
+  const [country, setCountry] = useState("México");
+  const [state, setState] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-  // Validaciones con Yup
-  const validationSchema = Yup.object({
-    fname: Yup.string().required("El nombre es obligatorio"),
-    lname: Yup.string().required("El apellido es obligatorio"),
-    email: Yup.string()
-      .email("Debe ser un correo válido")
-      .required("El correo es obligatorio"),
-    password: Yup.string()
-      .min(6, "La contraseña debe tener al menos 6 caracteres")
-      .required("La contraseña es obligatoria"),
-  });
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const faceLandmarkerRef = useRef<unknown>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastVideoTimeRef = useRef<number>(0);
+  const [cumple, setCumple] = useState(false);
 
-  // Formik para manejar el formulario
-  const formik = useFormik({
-    initialValues: {
-      fname: "",
-      lname: "",
-      email: "",
-      password: "",
-    },
-    validationSchema,
-    onSubmit: (values) => {
-      console.log("Datos del formulario:", values);
-      // Simula registro exitoso
-      setTimeout(() => {
-        router.push("/prueba-vida"); // Redirige a PruebaVida
-      }, 1000);
-    },
-  });
+  const detectGestures = useCallback((blendshapes: any[]) => {
+    if (!blendshapes || blendshapes.length === 0) return false;
+
+    const requiredGesture = blendshapes.find(
+      (shape) => shape.categoryName === gesture.shape
+    );
+
+    return requiredGesture && requiredGesture.score > 0.5;
+  }, []); // Elimina `gesture.shape` de las dependencias
+
+  const processFrame = useCallback(async () => {
+    if (!videoRef.current || !faceLandmarkerRef.current || !videoRef.current.videoWidth) {
+      animationFrameRef.current = requestAnimationFrame(processFrame);
+      return;
+    }
+
+    const video = videoRef.current;
+    if (video.currentTime === lastVideoTimeRef.current) {
+      animationFrameRef.current = requestAnimationFrame(processFrame);
+      return;
+    }
+    lastVideoTimeRef.current = video.currentTime;
+
+    try {
+      const results = await faceLandmarkerRef.current.detectForVideo(video, performance.now());
+
+      if (results.faceBlendshapes && results.faceBlendshapes.length > 0) {
+        const blendshapes = results.faceBlendshapes[0].categories;
+        setCumple(detectGestures(blendshapes));
+      }
+    } catch (err) {
+      console.error("Error processing frame:", err);
+    }
+
+    animationFrameRef.current = requestAnimationFrame(processFrame);
+  }, [detectGestures]);
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validar contraseñas
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
+
+    // Validar año de nacimiento
+    const currentYear = new Date().getFullYear();
+    if (Number(birthYear) < 1900 || Number(birthYear) > currentYear) {
+      setError("El año de nacimiento no es válido.");
+      return;
+    }
+
+    // Normalizar nombres y apellidos
+    const normalizeText = (text: string) =>
+      text.replace(/[^a-zA-Z\s]/g, "").trim();
+
+    const normalizedUsername = username
+      .replace(/[^a-zA-Z\s]/g, "")
+      .trim()
+      .split(" ")
+      .slice(0, 2)
+      .join(" ");
+
+    setName(normalizeText(name));
+    setLastName(normalizeText(lastName));
+    setMiddleName(normalizeText(middleName));
+    setUsername(normalizedUsername);
+
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      router.push("/prueba-vida");
+    } catch (error) {
+      setError("No se pudo registrar. Inténtalo de nuevo.");
+    }
+  };
 
   return (
-    <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar">
+    <div className="flex flex-col flex-1 lg:w-1/2 w-full">
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
           <div className="mb-5 sm:mb-8">
@@ -51,125 +154,141 @@ export default function SignUpForm() {
               Regístrate
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Ingresa tu correo electrónico y contraseña para registrarte.
+              Ingresa tus datos para registrarte.
             </p>
           </div>
           <div>
-            <form onSubmit={formik.handleSubmit}>
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  {/* Nombre */}
-                  <div className="sm:col-span-1">
-                    <Label>
-                      Nombre<span className="text-error-500">*</span>
-                    </Label>
+            <form onSubmit={handleSignUp}>
+              <div className="space-y-6">
+                <div>
+                  <Label>Nombre</Label>
+                  <Input
+                    type="text"
+                    placeholder="Tu nombre"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Apellido Paterno</Label>
                     <Input
                       type="text"
-                      id="fname"
-                      name="fname"
-                      placeholder="Ingresa tu nombre"
-                      value={formik.values.fname}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
+                      placeholder="Tu apellido paterno"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
                     />
-                    {formik.touched.fname && formik.errors.fname && (
-                      <p className="text-sm text-error-500">
-                        {formik.errors.fname}
-                      </p>
-                    )}
                   </div>
-                  {/* Apellido */}
-                  <div className="sm:col-span-1">
-                    <Label>
-                      Apellido<span className="text-error-500">*</span>
-                    </Label>
+                  <div>
+                    <Label>Apellido Materno</Label>
                     <Input
                       type="text"
-                      id="lname"
-                      name="lname"
-                      placeholder="Ingresa tu apellido"
-                      value={formik.values.lname}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
+                      placeholder="Tu apellido materno"
+                      value={middleName}
+                      onChange={(e) => setMiddleName(e.target.value)}
                     />
-                    {formik.touched.lname && formik.errors.lname && (
-                      <p className="text-sm text-error-500">
-                        {formik.errors.lname}
-                      </p>
-                    )}
                   </div>
                 </div>
-                {/* Correo Electrónico */}
                 <div>
-                  <Label>
-                    Correo Electrónico<span className="text-error-500">*</span>
-                  </Label>
+                  <Label>Nombre de Usuario</Label>
                   <Input
-                    type="email"
-                    id="email"
-                    name="email"
-                    placeholder="Ingresa tu correo electrónico"
-                    value={formik.values.email}
-                    onChange={formik.handleChange}
-                    onBlur={formik.handleBlur}
+                    type="text"
+                    placeholder="Tu nombre de usuario"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                   />
-                  {formik.touched.email && formik.errors.email && (
-                    <p className="text-sm text-error-500">
-                      {formik.errors.email}
-                    </p>
+                </div>
+                <div>
+                  <Label>Año de Nacimiento</Label>
+                  <Input
+                    type="number"
+                    placeholder="YYYY"
+                    value={birthYear}
+                    onChange={(e) => setBirthYear(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>País</Label>
+                    <Select
+                      options={[
+                        { value: "México", label: "México" },
+                        { value: "Otro", label: "Otro" },
+                      ]}
+                      defaultValue="México"
+                      onChange={(value) => setCountry(value)}
+                    />
+                  </div>
+                  {country === "México" && (
+                    <div>
+                      <Label>Estado</Label>
+                      <Select
+                        options={estadosMexico}
+                        placeholder="Selecciona tu estado"
+                        onChange={(value) => setState(value)}
+                      />
+                    </div>
                   )}
                 </div>
-                {/* Contraseña */}
                 <div>
-                  <Label>
-                    Contraseña<span className="text-error-500">*</span>
-                  </Label>
+                  <Label>Correo Electrónico</Label>
+                  <Input
+                    type="email"
+                    placeholder="example@mail.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Contraseña</Label>
                   <div className="relative">
                     <Input
-                      placeholder="Ingresa tu contraseña"
                       type={showPassword ? "text" : "password"}
-                      id="password"
-                      name="password"
-                      value={formik.values.password}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
+                      placeholder="Ingresa tu contraseña"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
+                      className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2 text-gray-500 dark:text-gray-400"
                     >
-                      {showPassword ? (
-                        <EyeIcon className="fill-gray-500 dark:fill-gray-400" />
-                      ) : (
-                        <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400" />
-                      )}
+                      {showPassword ? <EyeIcon /> : <EyeCloseIcon />}
                     </span>
                   </div>
-                  {formik.touched.password && formik.errors.password && (
-                    <p className="text-sm text-error-500">
-                      {formik.errors.password}
-                    </p>
-                  )}
                 </div>
-                {/* Botón */}
                 <div>
-                  <button
-                    type="submit"
-                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
-                  >
+                  <Label>Confirmar Contraseña</Label>
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirma tu contraseña"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                    <span
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2 text-gray-500 dark:text-gray-400"
+                    >
+                      {showConfirmPassword ? <EyeIcon /> : <EyeCloseIcon />}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded">
                     Registrarse
                   </button>
                 </div>
               </div>
             </form>
-
+            {error && (
+              <div className="mt-4 text-sm text-red-500">
+                {error}
+              </div>
+            )}
             <div className="mt-5">
-              <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                ¿Ya tienes una cuenta?
-                <Link
-                  href="/signin"
-                  className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
-                >
+              <p className="text-sm text-center text-gray-500 dark:text-gray-400">
+                ¿Ya tienes una cuenta?{" "}
+                <Link href="/signin" className="text-brand-500 hover:text-brand-600 dark:text-brand-400">
                   Inicia sesión
                 </Link>
               </p>

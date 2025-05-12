@@ -1,4 +1,7 @@
-import { useRouter } from "next/router";
+"use client";
+import { auth } from "@/firebaseConfig";
+import { onAuthStateChanged } from "firebase/auth";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function withAuth(Component: React.FC) {
@@ -6,10 +9,12 @@ export default function withAuth(Component: React.FC) {
     const router = useRouter();
 
     useEffect(() => {
-      const passedPruebaVida = localStorage.getItem("passedPruebaVida");
-      if (!passedPruebaVida) {
-        router.push("/prueba-vida");
-      }
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if(!user){
+          router.push("/signin");
+        }
+      });
+      return ()=> unsubscribe();
     }, [router]);
 
     return <Component {...props} />;
