@@ -17,5 +17,5 @@ export const HAND_GESTURES = [
   { tipo: "mano", nombre: "Cierra el puño ✊", shape: "Fist" },
 ];
 
-// export const GESTURES = [...FACE_GESTURES, ...HAND_GESTURES];
-export const GESTURES = [...HAND_GESTURES];
+export const GESTURES = [...FACE_GESTURES, ...HAND_GESTURES];
+// export const GESTURES = [...HAND_GESTURES];

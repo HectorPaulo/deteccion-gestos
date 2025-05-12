@@ -1,6 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { GESTURES } from "@/constants/gestures";
+import { useHandGestureDetection } from "./GestureHandDetector/GestureHandDetector";
+import { useFaceGestureDetection } from "./GestureFaceDetector/GestureFaceDetector";
 
 const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -14,13 +17,22 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
   const lastVideoTimeRef = useRef(-1);
   const animationFrameRef = useRef<number>(0);
   const detectionStartTimeRef = useRef<number | null>(null);
-
-  // Referencias para los modelos
-  const faceLandmarkerRef = useRef<any>(null);
-  const gestureRecognizerRef = useRef<any>(null);
   const visionRef = useRef<any>(null);
 
-  // Inicializar con un gesto aleatorio
+  const {
+    gestureRecognizerRef,
+    initHandGestureDetection,
+    detectHandGestures,
+    drawHandLandmarks
+  } = useHandGestureDetection(visionRef, showMesh, gesture);
+
+  const {
+    faceLandmarkerRef,
+    initFaceGestureDetection,
+    detectFaceGestures,
+    drawFaceLandmarks
+  } = useFaceGestureDetection(visionRef, showMesh, gesture);
+
   useEffect(() => {
     setGesture(GESTURES[Math.floor(Math.random() * GESTURES.length)]);
   }, []);
@@ -31,32 +43,6 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
     setCumple(false);
     detectionStartTimeRef.current = null;
   };
-
-  const detectGestures = useCallback(
-    (faceBlendshapes: any[], gestureResults: any[]) => {
-      if (!gesture) return false;
-
-      // Detección para gestos faciales
-      if (gesture.tipo === "rostro") {
-        const requiredBlendshape = faceBlendshapes?.[0]?.categories?.find(
-          (shape: any) => shape.categoryName === gesture.shape && shape.score >= gesture.umbral
-        );
-        return !!requiredBlendshape;
-      }
-
-      // Detección para gestos manuales
-      if (gesture.tipo === "mano") {
-        const requiredGesture = gestureResults?.gestures?.some(
-          (gestureList: any[]) =>
-            gestureList.some((g: any) => g.categoryName === gesture.shape)
-        );
-        return requiredGesture;
-      }
-
-      return false;
-    },
-    [gesture]
-  );
 
   const processFrame = useCallback(async () => {
     if (!videoRef.current || !videoRef.current.videoWidth) {
@@ -75,67 +61,39 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
       const startTimeMs = performance.now();
       let faceResults, gestureResults;
 
-      // Procesar rostro si es necesario
       if ((gesture.tipo === "rostro" || gesture.tipo === "combinado") && faceLandmarkerRef.current) {
         try {
           faceResults = await faceLandmarkerRef.current.detectForVideo(video, startTimeMs);
-          console.log("Resultados faciales:", faceResults);
         } catch (faceError) {
           console.error("Error en detección facial:", faceError);
         }
       }
 
-      // Procesar gestos de manos
       if ((gesture.tipo === "mano" || gesture.tipo === "combinado") && gestureRecognizerRef.current) {
         try {
           gestureResults = await gestureRecognizerRef.current.recognizeForVideo(video, startTimeMs);
-          console.log("Resultados de gestos:", gestureResults);
         } catch (handError) {
           console.error("Error en detección de gestos:", handError);
         }
       }
 
-      // Dibujar resultados
       const canvas = canvasRef.current;
       const ctx = canvas?.getContext("2d");
       if (ctx && canvas) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
         if (showMesh) {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-          // Dibujar landmarks faciales
-          if (faceResults?.faceLandmarks) {
-            const drawingUtils = new visionRef.current.DrawingUtils(ctx);
-            faceResults.faceLandmarks.forEach((landmarks: any) => {
-              drawingUtils.drawConnectors(
-                landmarks,
-                visionRef.current.FaceLandmarker.FACE_LANDMARKS_TESSELATION,
-                { color: "#C0C0C070", lineWidth: 1 }
-              );
-              drawingUtils.drawConnectors(
-                landmarks,
-                visionRef.current.FaceLandmarker.FACE_LANDMARKS_RIGHT_EYE,
-                { color: "#fff" }
-              );
-              drawingUtils.drawConnectors(
-                landmarks,
-                visionRef.current.FaceLandmarker.FACE_LANDMARKS_LEFT_EYE,
-                { color: "#fff" }
-              );
-              drawingUtils.drawConnectors(
-                landmarks,
-                visionRef.current.FaceLandmarker.FACE_LANDMARKS_LIPS,
-                { color: "#E0E0E0" }
-              );
-            });
-          }
+          drawFaceLandmarks(ctx, canvas, faceResults);
+          drawHandLandmarks(ctx, canvas, gestureResults);
         }
       }
 
-      // Validar gestos detectados
       const faceBlendshapes = faceResults?.faceBlendshapes || [];
-      const cumpleGesto = detectGestures(faceBlendshapes, gestureResults || {});
+      const cumpleGesto = gesture.tipo === "rostro"
+        ? detectFaceGestures(faceBlendshapes)
+        : gesture.tipo === "mano"
+          ? detectHandGestures(gestureResults || {})
+          : false;
 
       if (cumpleGesto) {
         if (!detectionStartTimeRef.current) {
@@ -153,7 +111,15 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
     }
 
     animationFrameRef.current = requestAnimationFrame(processFrame);
-  }, [showMesh, detectGestures, onSuccess, gesture?.tipo]);
+  }, [
+    showMesh,
+    onSuccess,
+    gesture?.tipo,
+    drawFaceLandmarks,
+    drawHandLandmarks,
+    detectFaceGestures,
+    detectHandGestures
+  ]);
 
   useEffect(() => {
     let isMounted = true;
@@ -163,12 +129,10 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
         setLoading(true);
         setError(null);
 
-        // Cargar el módulo de visión
         const vision = await import("@mediapipe/tasks-vision");
         visionRef.current = vision;
-        const { FilesetResolver, FaceLandmarker, GestureRecognizer } = vision;
+        const { FilesetResolver } = vision;
 
-        // Configurar WASM
         const wasmFileset = await FilesetResolver.forVisionTasks(
           "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm",
           {
@@ -178,26 +142,8 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
           }
         );
 
-        // Inicializar FaceLandmarker
-        faceLandmarkerRef.current = await FaceLandmarker.createFromOptions(wasmFileset, {
-          baseOptions: {
-            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-            delegate: "GPU"
-          },
-          runningMode: "VIDEO",
-          outputFaceBlendshapes: true,
-          numFaces: 1
-        });
-
-        // Inicializar GestureRecognizer para ambas manos
-        gestureRecognizerRef.current = await GestureRecognizer.createFromOptions(wasmFileset, {
-          baseOptions: {
-            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
-            delegate: "GPU"
-          },
-          runningMode: "VIDEO",
-          numHands: 2
-        });
+        await initFaceGestureDetection(wasmFileset);
+        await initHandGestureDetection(wasmFileset);
 
         if (isMounted) {
           setLoading(false);
@@ -216,7 +162,7 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [initFaceGestureDetection, initHandGestureDetection]);
 
   useEffect(() => {
     let isMounted = true;
@@ -258,7 +204,6 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
             throw new Error(`No se pudo reproducir el video: ${err.message}`);
           });
 
-          // Pequeño delay para asegurar estabilidad
           setTimeout(() => {
             if (isMounted) {
               animationFrameRef.current = requestAnimationFrame(processFrame);
@@ -331,7 +276,7 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
               autoPlay
               muted
               playsInline
-              className="w-full rounded-xl  border-2 border-gray-300"
+              className="w-full rounded-xl border-2 border-gray-300"
             />
             <canvas
               ref={canvasRef}
