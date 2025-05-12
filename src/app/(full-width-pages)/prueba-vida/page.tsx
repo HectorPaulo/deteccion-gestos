@@ -34,6 +34,23 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
   } = useFaceGestureDetection(visionRef, showMesh, gesture);
 
   useEffect(() => {
+    const originalOnError = window.onerror;
+    window.onerror = function(message, source, lineno, colno, error) {
+      // Ignorar errores específicos de WASM/Mediapipe
+      if (typeof message === 'string' && message.includes('vision_wasm_internal')) {
+        return true; // Evita que el error se propague
+      }
+      if (originalOnError) {
+        return originalOnError.apply(this, arguments);
+      }
+    };
+
+    return() => {
+      window.onerror = originalOnError;
+    };
+  }, []);
+
+  useEffect(() => {
     setGesture(GESTURES[Math.floor(Math.random() * GESTURES.length)]);
   }, []);
 
@@ -45,8 +62,10 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
   };
 
   const processFrame = useCallback(async () => {
-    if (!videoRef.current || !videoRef.current.videoWidth) {
-      animationFrameRef.current = requestAnimationFrame(processFrame);
+    try {
+
+      if (!videoRef.current || !videoRef.current.videoWidth) {
+        animationFrameRef.current = requestAnimationFrame(processFrame);
       return;
     }
 
@@ -94,7 +113,7 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
         : gesture.tipo === "mano"
           ? detectHandGestures(gestureResults || {})
           : false;
-
+          
       if (cumpleGesto) {
         if (!detectionStartTimeRef.current) {
           detectionStartTimeRef.current = performance.now();
@@ -111,6 +130,13 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
     }
 
     animationFrameRef.current = requestAnimationFrame(processFrame);
+  } catch (err) {
+    if (!err.message.includes('vision_wasm_internal')) {
+      console.error('Error importante: ', err);
+    }
+  } finally {
+    animationFrameRef.current = requestAnimationFrame(processFrame);
+  }
   }, [
     showMesh,
     onSuccess,
@@ -122,10 +148,19 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
   ]);
 
   useEffect(() => {
+    let originalConsoleError: (...data: any[]) => void;
     let isMounted = true;
 
     const initMediaPipe = async () => {
       try {
+        originalConsoleError = console.error;
+        console.error = (...args) => {
+          if (args.some(args => arg.include('vision_wasm_internal'))) {
+            return;
+          }
+          originalConsoleError.apply(console, args);
+        };
+        
         setLoading(true);
         setError(null);
 
@@ -154,6 +189,9 @@ const PruebaVida = ({ onSuccess }: { onSuccess: () => void }) => {
           setError(`Error al cargar los modelos: ${err.message}`);
           setLoading(false);
         }
+      } finally {
+        console.error = originalConsoleError;
+        setLoading(false);
       }
     };
 
